@@ -1,101 +1,75 @@
-(function () {
-    /**
-     * Template HTML du composant
-     */
-    const template = document.createElement("template");
 
-    template.innerHTML = `
-        <style>
-            :host {
-                display: block;
-                padding: 10px;
-            }
-        </style>
-        <div id="ui5_content"></div>
-    `;
+(function () {
 
     class SimpleTable extends HTMLElement {
 
         constructor() {
             super();
 
-            this._shadowRoot = this.attachShadow({ mode: "open" });
-            this._shadowRoot.appendChild(template.content.cloneNode(true));
-
-            this._container = this._shadowRoot.getElementById("ui5_content");
-
-            this._initialized = false;
+            // ✅ PAS de shadow DOM
+            this._container = document.createElement("div");
+            this.appendChild(this._container);
         }
 
-        /**
-         * Lifecycle hook appelé après chaque mise à jour SAC
-         */
         onCustomWidgetAfterUpdate(changedProperties) {
             this._render();
         }
 
-        /**
-         * Initialisation UI5
-         */
-        
-_initUI5(callback) {
-    if (window.sap && window.sap.ui && window.sap.ui.getCore) {
-        callback();
-    } else {
-        console.error("UI5 non disponible dans SAC");
-    
+        _render() {
+            if (!(window.sap && sap.ui && sap.ui.getCore)) {
+                console.error("UI5 non disponible");
+                return;
+            }
 
+            // Nettoyage
+            this._container.innerHTML = "";
 
-        /**
-         * Création de la table UI5
-         */
-  _render() {
-    this._initUI5(() => {
+            // ID unique (important pour UI5)
+            const tableId = "table_" + Math.random().toString(36).substr(2, 9);
+            this._container.id = tableId;
 
-        // Nettoyage
-        this._container.innerHTML = "";
+            // Modèle
+            const oModel = new sap.ui.model.json.JSONModel({
+                data: [
+                    { name: "Alice", age: 30, city: "Paris" },
+                    { name: "Bob", age: 25, city: "Marseille" },
+                    { name: "Charlie", age: 35, city: "Lyon" }
+                ]
+            });
 
-        // Création modèle
-        const oModel = new sap.ui.model.json.JSONModel({
-            data: [
-                { name: "Alice", age: 30, city: "Paris" },
-                { name: "Bob", age: 25, city: "Marseille" },
-                { name: "Charlie", age: 35, city: "Lyon" }
-            ]
-        });
+            // Table UI5
+            const oTable = new sap.m.Table({
+                headerText: "Simple UI5 Table",
+                columns: [
+                    new sap.m.Column({
+                        header: new sap.m.Label({ text: "Name" })
+                    }),
+                    new sap.m.Column({
+                        header: new sap.m.Label({ text: "Age" })
+                    }),
+                    new sap.m.Column({
+                        header: new sap.m.Label({ text: "City" })
+                    })
+                ]
+            });
 
-        // Table
-        const oTable = new sap.m.Table({
-            headerText: "Simple UI5 Table",
-            columns: [
-                new sap.m.Column({
-                    header: new sap.m.Label({ text: "Name" })
-                }),
-                new sap.m.Column({
-                    header: new sap.m.Label({ text: "Age" })
-                }),
-                new sap.m.Column({
-                    header: new sap.m.Label({ text: "City" })
-                })
-            ]
-        });
+            const oTemplate = new sap.m.ColumnListItem({
+                cells: [
+                    new sap.m.Text({ text: "{name}" }),
+                    new sap.m.Text({ text: "{age}" }),
+                    new sap.m.Text({ text: "{city}" })
+                ]
+            });
 
-        const oTemplate = new sap.m.ColumnListItem({
-            cells: [
-                new sap.m.Text({ text: "{name}" }),
-                new sap.m.Text({ text: "{age}" }),
-                new sap.m.Text({ text: "{city}" })
-            ]
-        });
+            oTable.setModel(oModel);
+            oTable.bindItems("/data", oTemplate);
 
-        oTable.setModel(oModel);
-        oTable.bindItems("/data", oTemplate);
-
-        oTable.placeAt(this._container);
-    });
-}
+            // ✅ IMPORTANT : placeAt avec ID (string), pas DOM element
+            oTable.placeAt(tableId);
         }
     }
 
     customElements.define("com-sap-sample-tablesimple", SimpleTable);
+
 })();
+``
