@@ -1,4 +1,3 @@
-
 (function () {
 
     class SimpleTable extends HTMLElement {
@@ -6,13 +5,30 @@
         constructor() {
             super();
 
-            // ✅ PAS de shadow DOM
             this._container = document.createElement("div");
             this.appendChild(this._container);
+
+            this._table = null;
+            this._renderScheduled = false;
         }
 
         onCustomWidgetAfterUpdate(changedProperties) {
-            this._render();
+            this._scheduleRender();
+        }
+
+        /**
+         * Evite les multi-rendering simultanés SAC
+         */
+        _scheduleRender() {
+            if (this._renderScheduled) return;
+
+            this._renderScheduled = true;
+
+            // ✅ CRITIQUE : laisse SAC finir son cycle DOM
+            setTimeout(() => {
+                this._renderScheduled = false;
+                this._render();
+            }, 0);
         }
 
         _render() {
@@ -21,23 +37,28 @@
                 return;
             }
 
-            // Nettoyage
+            // ✅ Nettoyage UI5 précédent
+            if (this._table) {
+                this._table.destroy();
+                this._table = null;
+            }
+
             this._container.innerHTML = "";
 
-            // ID unique (important pour UI5)
-            const tableId = "table_" + Math.random().toString(36).substr(2, 9);
-            this._container.id = tableId;
+            // ✅ ID unique obligatoire
+            const containerId = "ui5_container_" + Date.now();
+            this._container.id = containerId;
 
-            // Modèle
+            // ✅ Données mock
             const oModel = new sap.ui.model.json.JSONModel({
                 data: [
-                    { name: "Alice", age: 30, city: "Paris" },
+                    { name: "Alice", age: 30, city: "Paris5" },
                     { name: "Bob", age: 25, city: "Marseille" },
                     { name: "Charlie", age: 35, city: "Lyon" }
                 ]
             });
 
-            // Table UI5
+            // ✅ Table UI5
             const oTable = new sap.m.Table({
                 headerText: "Simple UI5 Table",
                 columns: [
@@ -64,12 +85,16 @@
             oTable.setModel(oModel);
             oTable.bindItems("/data", oTemplate);
 
-            // ✅ IMPORTANT : placeAt avec ID (string), pas DOM element
-            oTable.placeAt(tableId);
+            // ✅ CRITIQUE : vérifier que le DOM existe bien
+            if (document.getElementById(containerId)) {
+                oTable.placeAt(containerId);
+                this._table = oTable;
+            } else {
+                console.error("Container non trouvé dans le DOM");
+            }
         }
     }
 
     customElements.define("com-sap-sample-tablesimple", SimpleTable);
 
 })();
-``
